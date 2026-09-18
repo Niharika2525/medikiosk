@@ -123,6 +123,6 @@ export type QueueItem = {
 };
 
 export const DEMO_QUEUE: QueueItem[] = [
-  { patient: DEMO_PATIENTS[1], arrivedAt: "09:12", chiefComplaint: "Fever × 3 days, cough", priority: "routine", status: "ready" },
-  { patient: DEMO_PATIENTS[2], arrivedAt: "09:31", chiefComplaint: "Abdominal pain", priority: "urgent", status: "intake" },
+  { patient: DEMO_PATIENTS[1]!, arrivedAt: "09:12", chiefComplaint: "Fever × 3 days, cough", priority: "routine", status: "ready" },
+  { patient: DEMO_PATIENTS[2]!, arrivedAt: "09:31", chiefComplaint: "Abdominal pain", priority: "urgent", status: "intake" },
 ];
