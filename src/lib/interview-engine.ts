@@ -56,7 +56,7 @@ export const QUESTIONS: Question[] = [
     section: "Chief Complaint",
     text: { en: "Please describe your problem in your own words.", hi: "कृपया अपनी समस्या अपने शब्दों में बताएं।" },
     type: "text",
-    when: (a) => a.cc === "other",
+    when: (a) => a["cc"] === "other",
   },
   {
     id: "duration",
@@ -83,7 +83,7 @@ export const QUESTIONS: Question[] = [
     text: { en: "Does the pain spread to your left arm, jaw or back?", hi: "क्या दर्द बाएं हाथ, जबड़े या पीठ में फैलता है?" },
     type: "choice",
     options: yn,
-    when: (a) => a.cc === "chest_pain",
+    when: (a) => a["cc"] === "chest_pain",
   },
   {
     id: "cp_sweat",
@@ -91,7 +91,7 @@ export const QUESTIONS: Question[] = [
     text: { en: "Are you sweating, feeling sick, or short of breath with the pain?", hi: "क्या दर्द के साथ पसीना, जी मिचलाना या साँस फूल रही है?" },
     type: "choice",
     options: yn,
-    when: (a) => a.cc === "chest_pain",
+    when: (a) => a["cc"] === "chest_pain",
   },
   // Fever branch
   {
@@ -106,7 +106,7 @@ export const QUESTIONS: Question[] = [
       { value: "bleeding", label: { en: "Bleeding gums/nose", hi: "मसूड़ों/नाक से खून" }, icon: "🩸" },
       { value: "none", label: { en: "None of these", hi: "इनमें से कोई नहीं" }, icon: "👌" },
     ],
-    when: (a) => a.cc === "fever",
+    when: (a) => a["cc"] === "fever",
   },
   // Breathless branch
   {
@@ -115,7 +115,7 @@ export const QUESTIONS: Question[] = [
     text: { en: "Are you breathless even while sitting still?", hi: "क्या बैठे-बैठे भी साँस फूलती है?" },
     type: "choice",
     options: yn,
-    when: (a) => a.cc === "breathless",
+    when: (a) => a["cc"] === "breathless",
   },
   // Headache branch
   {
@@ -124,7 +124,7 @@ export const QUESTIONS: Question[] = [
     text: { en: "Did the headache start suddenly, like a thunderclap — the worst of your life?", hi: "क्या सिरदर्द अचानक, बहुत तेज़ शुरू हुआ — जीवन का सबसे बुरा?" },
     type: "choice",
     options: yn,
-    when: (a) => a.cc === "headache",
+    when: (a) => a["cc"] === "headache",
   },
   {
     id: "ha_neuro",
@@ -132,7 +132,7 @@ export const QUESTIONS: Question[] = [
     text: { en: "Any weakness of face/arm/leg, slurred speech, or vision loss?", hi: "चेहरे/हाथ/पैर में कमजोरी, बोलने में दिक्कत या दिखाई कम देना?" },
     type: "choice",
     options: yn,
-    when: (a) => a.cc === "headache",
+    when: (a) => a["cc"] === "headache",
   },
   // Abdominal
   {
@@ -141,7 +141,7 @@ export const QUESTIONS: Question[] = [
     text: { en: "Have you vomited blood or passed black/bloody stools?", hi: "क्या खून की उल्टी या काला/खूनी मल हुआ है?" },
     type: "choice",
     options: yn,
-    when: (a) => a.cc === "abdominal",
+    when: (a) => a["cc"] === "abdominal",
   },
   // Past history
   {
@@ -183,7 +183,7 @@ export const QUESTIONS: Question[] = [
     section: "Medicines",
     text: { en: "Please say or type the medicine names you remember.", hi: "कृपया जो दवाओं के नाम याद हों, बोलें या लिखें।" },
     type: "text",
-    when: (a) => a.meds === "yes",
+    when: (a) => a["meds"] === "yes",
   },
   // Allergies
   {
@@ -308,9 +308,9 @@ export function detectRedFlags(a: Answers): RedFlag[] {
     const x = a[id];
     return Array.isArray(x) ? x.includes(v) : x === v;
   };
-  const sev = Number(a.severity ?? 0);
+  const sev = Number(a["severity"] ?? 0);
 
-  if (a.cc === "chest_pain" && (has("cp_radiate", "yes") || has("cp_sweat", "yes") || sev >= 7)) {
+  if (a["cc"] === "chest_pain" && (has("cp_radiate", "yes") || has("cp_sweat", "yes") || sev >= 7)) {
     flags.push({
       id: "acs",
       title: "Possible acute coronary syndrome",
@@ -319,7 +319,7 @@ export function detectRedFlags(a: Answers): RedFlag[] {
       triggeredBy: ["cc", "cp_radiate", "cp_sweat", "severity"],
     });
   }
-  if (a.cc === "breathless" && has("br_rest", "yes")) {
+  if (a["cc"] === "breathless" && has("br_rest", "yes")) {
     flags.push({
       id: "resp",
       title: "Breathlessness at rest",
@@ -328,7 +328,7 @@ export function detectRedFlags(a: Answers): RedFlag[] {
       triggeredBy: ["cc", "br_rest"],
     });
   }
-  if (a.cc === "headache" && (has("ha_sudden", "yes") || has("ha_neuro", "yes"))) {
+  if (a["cc"] === "headache" && (has("ha_sudden", "yes") || has("ha_neuro", "yes"))) {
     flags.push({
       id: "neuro",
       title: "Thunderclap headache / focal neuro deficit",
