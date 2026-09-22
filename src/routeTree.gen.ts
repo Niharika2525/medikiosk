@@ -10,33 +10,154 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ConsentRouteImport } from './routes/consent'
+import { Route as DocumentsRouteImport } from './routes/documents'
+import { Route as InterviewRouteImport } from './routes/interview'
+import { Route as LanguageRouteImport } from './routes/language'
+import { Route as PatientRouteImport } from './routes/patient'
+import { Route as PhysicianRouteImport } from './routes/physician'
+import { Route as SummaryRouteImport } from './routes/summary'
+import { Route as TimelineRouteImport } from './routes/timeline'
+import { Route as TriageRouteImport } from './routes/triage'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ConsentRoute = ConsentRouteImport.update({
+  id: '/consent',
+  path: '/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DocumentsRoute = DocumentsRouteImport.update({
+  id: '/documents',
+  path: '/documents',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InterviewRoute = InterviewRouteImport.update({
+  id: '/interview',
+  path: '/interview',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LanguageRoute = LanguageRouteImport.update({
+  id: '/language',
+  path: '/language',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PatientRoute = PatientRouteImport.update({
+  id: '/patient',
+  path: '/patient',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PhysicianRoute = PhysicianRouteImport.update({
+  id: '/physician',
+  path: '/physician',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SummaryRoute = SummaryRouteImport.update({
+  id: '/summary',
+  path: '/summary',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TimelineRoute = TimelineRouteImport.update({
+  id: '/timeline',
+  path: '/timeline',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TriageRoute = TriageRouteImport.update({
+  id: '/triage',
+  path: '/triage',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/consent': typeof ConsentRoute
+  '/documents': typeof DocumentsRoute
+  '/interview': typeof InterviewRoute
+  '/language': typeof LanguageRoute
+  '/patient': typeof PatientRoute
+  '/physician': typeof PhysicianRoute
+  '/summary': typeof SummaryRoute
+  '/timeline': typeof TimelineRoute
+  '/triage': typeof TriageRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/consent': typeof ConsentRoute
+  '/documents': typeof DocumentsRoute
+  '/interview': typeof InterviewRoute
+  '/language': typeof LanguageRoute
+  '/patient': typeof PatientRoute
+  '/physician': typeof PhysicianRoute
+  '/summary': typeof SummaryRoute
+  '/timeline': typeof TimelineRoute
+  '/triage': typeof TriageRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/consent': typeof ConsentRoute
+  '/documents': typeof DocumentsRoute
+  '/interview': typeof InterviewRoute
+  '/language': typeof LanguageRoute
+  '/patient': typeof PatientRoute
+  '/physician': typeof PhysicianRoute
+  '/summary': typeof SummaryRoute
+  '/timeline': typeof TimelineRoute
+  '/triage': typeof TriageRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/consent'
+    | '/documents'
+    | '/interview'
+    | '/language'
+    | '/patient'
+    | '/physician'
+    | '/summary'
+    | '/timeline'
+    | '/triage'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/consent'
+    | '/documents'
+    | '/interview'
+    | '/language'
+    | '/patient'
+    | '/physician'
+    | '/summary'
+    | '/timeline'
+    | '/triage'
+  id:
+    | '__root__'
+    | '/'
+    | '/consent'
+    | '/documents'
+    | '/interview'
+    | '/language'
+    | '/patient'
+    | '/physician'
+    | '/summary'
+    | '/timeline'
+    | '/triage'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ConsentRoute: typeof ConsentRoute
+  DocumentsRoute: typeof DocumentsRoute
+  InterviewRoute: typeof InterviewRoute
+  LanguageRoute: typeof LanguageRoute
+  PatientRoute: typeof PatientRoute
+  PhysicianRoute: typeof PhysicianRoute
+  SummaryRoute: typeof SummaryRoute
+  TimelineRoute: typeof TimelineRoute
+  TriageRoute: typeof TriageRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +169,83 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/consent': {
+      id: '/consent'
+      path: '/consent'
+      fullPath: '/consent'
+      preLoaderRoute: typeof ConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/documents': {
+      id: '/documents'
+      path: '/documents'
+      fullPath: '/documents'
+      preLoaderRoute: typeof DocumentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/interview': {
+      id: '/interview'
+      path: '/interview'
+      fullPath: '/interview'
+      preLoaderRoute: typeof InterviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/language': {
+      id: '/language'
+      path: '/language'
+      fullPath: '/language'
+      preLoaderRoute: typeof LanguageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/patient': {
+      id: '/patient'
+      path: '/patient'
+      fullPath: '/patient'
+      preLoaderRoute: typeof PatientRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/physician': {
+      id: '/physician'
+      path: '/physician'
+      fullPath: '/physician'
+      preLoaderRoute: typeof PhysicianRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/summary': {
+      id: '/summary'
+      path: '/summary'
+      fullPath: '/summary'
+      preLoaderRoute: typeof SummaryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/timeline': {
+      id: '/timeline'
+      path: '/timeline'
+      fullPath: '/timeline'
+      preLoaderRoute: typeof TimelineRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/triage': {
+      id: '/triage'
+      path: '/triage'
+      fullPath: '/triage'
+      preLoaderRoute: typeof TriageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ConsentRoute: ConsentRoute,
+  DocumentsRoute: DocumentsRoute,
+  InterviewRoute: InterviewRoute,
+  LanguageRoute: LanguageRoute,
+  PatientRoute: PatientRoute,
+  PhysicianRoute: PhysicianRoute,
+  SummaryRoute: SummaryRoute,
+  TimelineRoute: TimelineRoute,
+  TriageRoute: TriageRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

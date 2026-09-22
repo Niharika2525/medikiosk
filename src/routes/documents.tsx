@@ -42,7 +42,10 @@ function DocumentsPage() {
   const onFile = (files: FileList | null) => {
     const f = files?.[0];
     if (!f) return;
-    if (f.size > 20 * 1024 * 1024) return toast.error("File too large (max 20 MB).");
+    if (f.size > 20 * 1024 * 1024) {
+      toast.error("File too large (max 20 MB).");
+      return;
+    }
     const d: MedicalDoc = {
       id: `u-${Date.now()}`,
       title: f.name.slice(0, 60),
