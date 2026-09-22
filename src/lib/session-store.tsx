@@ -200,7 +200,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const setSummaryStatus = useCallback((status: ClinicalSummary["status"], note?: string) => {
-    setState((s) => (s.summary ? { ...s, summary: { ...s.summary, status, physicianNote: note ?? s.summary.physicianNote } } : s));
+    setState((s) => {
+      if (!s.summary) return s;
+      const summary: ClinicalSummary = { ...s.summary, status };
+      const n = note ?? s.summary.physicianNote;
+      if (n !== undefined) summary.physicianNote = n;
+      return { ...s, summary };
+    });
   }, []);
 
   const value = useMemo<Ctx>(
