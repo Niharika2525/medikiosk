@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { KioskShell, AIDisclaimer } from "@/components/kiosk/KioskShell";
 import { VoiceWaveform } from "@/components/kiosk/VoiceWaveform";
+import { NewSymptomPanel } from "@/components/kiosk/NewSymptomPanel";
 import { speechLocale, t } from "@/lib/i18n";
 import { visibleQuestions, type Question } from "@/lib/interview-engine";
 import { useSession } from "@/lib/session-store";
@@ -243,6 +244,16 @@ function InterviewPage() {
               )}
             </div>
           </div>
+
+          <NewSymptomPanel
+            language={lang}
+            onAnswers={(d, qa) => {
+              const prev = String(state.answers["ai_symptom"] ?? "");
+              const block = `New symptom: ${d}\n${qa.filter((x) => x.answer).map((x) => `- ${x.question} → ${x.answer}`).join("\n")}`;
+              answer("ai_symptom", prev ? `${prev}\n\n${block}` : block);
+              toast.success("Added to your history for the doctor.");
+            }}
+          />
 
           <div className="flex flex-wrap items-center gap-3">
             <Button variant="danger" size="lg" className="rounded-full" onClick={() => { answer("severity", "10"); toast.error("Emergency alert sent to triage desk (demo)."); }}>

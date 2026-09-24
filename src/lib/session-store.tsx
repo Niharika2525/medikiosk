@@ -140,6 +140,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       text: e.lines.join("\n"),
       sources: e.sources,
     }));
+    if (state.answers["ai_symptom"]) {
+      sections.push({ id: "ai-new-symptom", title: "Patient-described New Symptom (AI-clarified)", text: String(state.answers["ai_symptom"]), sources: [{ kind: "interview", ref: "Q:ai_symptom" }] });
+    }
 
     const doneDocs = state.docs.filter((d) => d.status === "done" && d.extracted);
     if (doneDocs.length) {
