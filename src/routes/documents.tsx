@@ -1,11 +1,13 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Camera, CheckCircle2, FileText, FlaskConical, Hospital, Pill, ScanLine, Upload, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { KioskShell, StepHeader, DemoBadge, AIDisclaimer } from "@/components/kiosk/KioskShell";
 import { type MedicalDoc } from "@/lib/demo-data";
-import { isAbnormal, useSession } from "@/lib/session-store";
+import { isAbnormal, refRange, useSession } from "@/lib/session-store";
+import { extractDocument } from "@/lib/ocr-ai.functions";
 import { t } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
@@ -23,68 +25,142 @@ export const Route = createFileRoute("/documents")({
 
 const KIND_ICON = { prescription: Pill, lab: FlaskConical, discharge: Hospital, other: FileText } as const;
 
+async function fileToPayload(f: File | Blob, name: string) {
+  const type = f.type;
+  if (type === "application/pdf") {
+    const buf = new Uint8Array(await f.arrayBuffer());
+    let s = "";
+    for (let i = 0; i < buf.length; i += 0x8000) s += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+    return { fileName: name, mimeType: "application/pdf" as const, base64: btoa(s) };
+  }
+  // Downscale images to keep upload small while staying legible.
+  const bmp = await createImageBitmap(f);
+  const scale = Math.min(1, 2000 / Math.max(bmp.width, bmp.height));
+  const c = document.createElement("canvas");
+  c.width = Math.round(bmp.width * scale);
+  c.height = Math.round(bmp.height * scale);
+  c.getContext("2d")!.drawImage(bmp, 0, 0, c.width, c.height);
+  const url = c.toDataURL("image/jpeg", 0.88);
+  return { fileName: name, mimeType: "image/jpeg" as const, base64: url.split(",")[1] };
+}
+
 function DocumentsPage() {
   const { state, updateDoc, addDoc } = useSession();
   const navigate = useNavigate();
   const lang = state.language;
   const fileRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [camOn, setCamOn] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
+  const extract = useServerFn(extractDocument);
 
-  const scan = (d: MedicalDoc) => {
-    updateDoc(d.id, { status: "scanning" });
-    setTimeout(() => {
-      updateDoc(d.id, { status: "done", confidence: 0.86 + Math.random() * 0.12 });
-      setOpenId(d.id);
-      toast.success(`OCR complete: ${d.title}`);
-    }, 1800);
+  useEffect(() => () => streamRef.current?.getTracks().forEach((t) => t.stop()), []);
+
+  const loadSample = (d: MedicalDoc) => {
+    updateDoc(d.id, { status: "done", confidence: 1 });
+    setOpenId(d.id);
+    toast.info(`Sample record loaded (demo): ${d.title}`);
+  };
+
+  const runOcr = async (blob: Blob, name: string) => {
+    if (blob.size > 10 * 1024 * 1024) return toast.error("File too large (max 10 MB).");
+    if (!["image/jpeg", "image/png", "image/webp", "application/pdf"].includes(blob.type)) return toast.error("Please use a JPG, PNG, WEBP photo or a PDF.");
+    const id = `u-${Date.now()}`;
+    addDoc({ id, title: name.slice(0, 60), kind: "other", date: new Date().toISOString().slice(0, 10), status: "scanning", demo: false });
+    try {
+      const r = await extract({ data: await fileToPayload(blob, name) });
+      if (!r.ok) throw new Error(r.error);
+      const x = r.result;
+      if (!x.isMedicalDocument) {
+        updateDoc(id, { status: "done", title: `${name.slice(0, 40)} (not a medical document)`, confidence: x.confidence, extracted: {} });
+        return toast.warning("That doesn't look like a medical document.");
+      }
+      const dates = [...new Set([x.documentDate, x.periodFrom, x.periodTo, ...x.labs.map((l) => l.date)].filter((v): v is string => !!v))].sort();
+      updateDoc(id, {
+        status: "done",
+        title: x.title || name,
+        kind: x.kind,
+        date: x.documentDate ?? x.periodFrom ?? new Date().toISOString().slice(0, 10),
+        confidence: Math.max(0, Math.min(1, x.confidence)),
+        extracted: {
+          facility: x.facility ?? undefined,
+          doctor: x.doctor ?? undefined,
+          diagnoses: x.diagnoses.length ? x.diagnoses : undefined,
+          investigations: x.investigations.length ? x.investigations : undefined,
+          medicines: x.medicines.length ? x.medicines : undefined,
+          labs: x.labs.length ? x.labs : undefined,
+          dates: dates.length ? dates : undefined,
+          period: x.periodFrom || x.periodTo ? { from: x.periodFrom, to: x.periodTo } : undefined,
+        },
+      });
+      setOpenId(id);
+      toast.success(`Read: ${x.title}`);
+    } catch (e) {
+      updateDoc(id, { status: "failed" as MedicalDoc["status"], title: `${name.slice(0, 40)} — couldn't read` });
+      toast.error(e instanceof Error ? e.message : "Couldn't read that document.");
+    }
+  };
+
+  const startCam = async () => {
+    try {
+      const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment", width: { ideal: 1920 } } });
+      streamRef.current = s;
+      setCamOn(true);
+      requestAnimationFrame(() => { if (videoRef.current) { videoRef.current.srcObject = s; void videoRef.current.play(); } });
+    } catch {
+      toast.error("Camera not available. Use Upload file instead.");
+    }
+  };
+  const stopCam = () => { streamRef.current?.getTracks().forEach((t) => t.stop()); streamRef.current = null; setCamOn(false); };
+  const capture = () => {
+    const v = videoRef.current;
+    if (!v || !v.videoWidth) return;
+    const c = document.createElement("canvas");
+    c.width = v.videoWidth; c.height = v.videoHeight;
+    c.getContext("2d")!.drawImage(v, 0, 0);
+    c.toBlob((b) => { if (b) void runOcr(b, `Camera scan ${new Date().toLocaleTimeString()}`); }, "image/jpeg", 0.9);
+    stopCam();
   };
 
   const onFile = (files: FileList | null) => {
     const f = files?.[0];
-    if (!f) return;
-    if (f.size > 20 * 1024 * 1024) {
-      toast.error("File too large (max 20 MB).");
-      return;
-    }
-    const d: MedicalDoc = {
-      id: `u-${Date.now()}`,
-      title: f.name.slice(0, 60),
-      kind: "other",
-      date: new Date().toISOString().slice(0, 10),
-      status: "pending",
-      demo: true,
-      extracted: {
-        facility: "Unknown facility (mock OCR)",
-        dates: [new Date().toISOString().slice(0, 10)],
-        medicines: [{ name: "Paracetamol", dose: "650 mg", frequency: "SOS" }],
-        investigations: ["Text detected — mock extraction for uploaded file"],
-      },
-    };
-    addDoc(d);
-    scan(d);
+    if (fileRef.current) fileRef.current.value = "";
+    if (f) void runOcr(f, f.name);
   };
 
   const doneCount = state.docs.filter((d) => d.status === "done").length;
 
   return (
     <KioskShell wide>
-      <StepHeader eyebrow="Step 5 of 7" title={t(lang, "reviewDocs")} subtitle="Place a prescription, lab report or discharge summary under the camera, or upload a file. The AI reads it and pulls out medicines, diagnoses, test values and dates." />
+      <StepHeader eyebrow="Step 5 of 7" title={t(lang, "reviewDocs")} subtitle="Hold a prescription, lab report or discharge summary up to the camera, or upload a photo/PDF. The AI reads it and pulls out medicines, diagnoses, test values, units and dates." />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_1.3fr]">
         <div className="space-y-4">
           <div className="relative overflow-hidden rounded-3xl border-2 border-dashed border-primary/50 bg-card p-6 text-center shadow-card">
-            <div className="pointer-events-none absolute inset-x-6 h-0.5 bg-gradient-primary opacity-70 animate-scan" />
-            <Camera className="mx-auto size-12 text-primary" />
-            <h3 className="mt-3 text-xl font-bold">Camera scanner</h3>
-            <p className="text-sm text-muted-foreground">Kiosk document camera (simulated)</p>
+            {camOn ? (
+              <video ref={videoRef} playsInline muted className="mx-auto aspect-[4/3] w-full rounded-2xl bg-muted object-cover" />
+            ) : (
+              <>
+                <div className="pointer-events-none absolute inset-x-6 h-0.5 bg-gradient-primary opacity-70 animate-scan" />
+                <Camera className="mx-auto size-12 text-primary" />
+                <h3 className="mt-3 text-xl font-bold">Document scanner</h3>
+                <p className="text-sm text-muted-foreground">Real AI reading · photos (JPG/PNG) or PDF up to 10 MB</p>
+              </>
+            )}
             <div className="mt-4 grid gap-2 sm:grid-cols-2">
-              <Button variant="hero" size="xl" onClick={() => { const p = state.docs.find((d) => d.status === "pending"); p ? scan(p) : toast.info("All demo documents scanned."); }}>
-                <ScanLine /> Scan next document
-              </Button>
-              <Button variant="kiosk" size="xl" onClick={() => fileRef.current?.click()}>
-                <Upload /> Upload file
-              </Button>
-              <input ref={fileRef} type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => onFile(e.target.files)} />
+              {camOn ? (
+                <>
+                  <Button variant="hero" size="xl" onClick={capture}><ScanLine /> Capture & read</Button>
+                  <Button variant="kiosk" size="xl" onClick={stopCam}>Cancel</Button>
+                </>
+              ) : (
+                <>
+                  <Button variant="hero" size="xl" onClick={startCam}><Camera /> Use camera</Button>
+                  <Button variant="kiosk" size="xl" onClick={() => fileRef.current?.click()}><Upload /> Upload file</Button>
+                </>
+              )}
+              <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,application/pdf" className="hidden" onChange={(e) => onFile(e.target.files)} />
             </div>
           </div>
           <div className="rounded-3xl border bg-card p-5 shadow-card">
