@@ -64,7 +64,19 @@ type Ctx = {
 const SessionCtx = createContext<Ctx | null>(null);
 
 export function isAbnormal(l: LabValue) {
-  return l.value < l.low || l.value > l.high;
+  return (l.low != null && l.value < l.low) || (l.high != null && l.value > l.high);
+}
+
+export function refRange(l: LabValue) {
+  if (l.low != null && l.high != null) return `${l.low}–${l.high} ${l.unit}`;
+  if (l.high != null) return `< ${l.high} ${l.unit}`;
+  if (l.low != null) return `> ${l.low} ${l.unit}`;
+  return "no range printed";
+}
+
+function periodText(p?: { from: string | null; to: string | null }) {
+  if (!p || (!p.from && !p.to)) return "";
+  return ` (${p.from ?? "?"} → ${p.to ?? "?"})`;
 }
 
 export function SessionProvider({ children }: { children: ReactNode }) {
@@ -97,20 +109,30 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     for (const d of state.docs) {
       if (d.status !== "done" || !d.extracted) continue;
       const x = d.extracted;
+      const pt = periodText(x.period);
       if (d.kind === "discharge") {
-        ev.push({ date: x.dates?.[0] ?? d.date, title: "Hospital admission", detail: x.diagnoses?.join("; ") ?? "", kind: "admission", source: d.title });
+        ev.push({ date: x.period?.from ?? x.dates?.[0] ?? d.date, title: `Hospital admission${pt}`, detail: x.diagnoses?.join("; ") ?? "", kind: "admission", source: d.title });
       } else if (d.kind === "lab") {
         const abn = x.labs?.filter(isAbnormal) ?? [];
         ev.push({
           date: d.date,
-          title: `Lab report (${x.labs?.length ?? 0} tests)`,
-          detail: abn.length ? `${abn.length} abnormal: ${abn.map((l) => `${l.test} ${l.value}${l.unit}`).join(", ")}` : "All values within range",
+          title: `Lab report (${x.labs?.length ?? 0} tests)${pt}`,
+          detail: abn.length ? `${abn.length} abnormal: ${abn.map((l) => `${l.test} ${l.value} ${l.unit}`).join(", ")}` : "All values within range",
           kind: "lab",
           source: d.title,
           abnormal: abn.length > 0,
         });
       } else {
-        ev.push({ date: d.date, title: "OPD visit & prescription", detail: (x.medicines ?? []).map((m) => `${m.name} ${m.dose}`).join(", "), kind: "visit", source: d.title });
+        ev.push({
+          date: d.date,
+          title: `${d.kind === "prescription" ? "OPD visit & prescription" : "Medical document"}${pt}`,
+          detail: [
+            (x.medicines ?? []).map((m) => `${m.name} ${m.dose}${m.startDate || m.endDate ? ` [${m.startDate ?? "?"} → ${m.endDate ?? "?"}]` : ""}`).join(", "),
+            x.diagnoses?.length ? `Dx: ${x.diagnoses.join("; ")}` : "",
+          ].filter(Boolean).join(" · "),
+          kind: "visit",
+          source: d.title,
+        });
       }
     }
     if (state.answers["cc"]) {
@@ -169,7 +191,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         sections.push({
           id: "abnormal-labs",
           title: "Abnormal Investigations",
-          text: labs.map(({ l }) => `${l.test}: ${l.value} ${l.unit} (ref ${l.low}–${l.high}) ${l.value > l.high ? "↑ HIGH" : "↓ LOW"}`).join("\n"),
+          text: labs.map(({ l }) => `${l.test}: ${l.value} ${l.unit} (ref ${refRange(l)}) ${l.high != null && l.value > l.high ? "↑ HIGH" : "↓ LOW"}${l.date ? ` · ${l.date}` : ""}`).join("\n"),
           sources: [...new Set(labs.map(({ d }) => d.id))].map((id) => ({ kind: "document", ref: id })),
         });
       }
