@@ -174,16 +174,17 @@ function DocumentsPage() {
                 return (
                   <li key={d.id}>
                     <button
-                      onClick={() => (d.status === "done" ? setOpenId(d.id) : scan(d))}
+                      onClick={() => (d.status === "done" ? setOpenId(d.id) : d.status === "pending" ? loadSample(d) : undefined)}
                       className={cn("flex w-full items-center gap-3 rounded-2xl border-2 p-3 text-left transition-all hover:border-primary", openId === d.id ? "border-primary bg-accent/50" : "border-border")}
                     >
                       <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-secondary text-secondary-foreground"><Icon className="size-5" /></span>
                       <div className="min-w-0 flex-1">
                         <div className="truncate font-semibold">{d.title}</div>
-                        <div className="text-xs text-muted-foreground">{d.date} · {d.kind}</div>
+                        <div className="text-xs text-muted-foreground">{d.date} · {d.kind}{d.demo ? " · sample" : " · AI-read"}</div>
                       </div>
-                      {d.status === "pending" && <span className="text-xs font-bold text-primary">Tap to scan</span>}
-                      {d.status === "scanning" && <span className="h-2 w-16 rounded-full skeleton-shimmer" />}
+                      {d.status === "pending" && <span className="text-xs font-bold text-primary">Load sample</span>}
+                      {d.status === "scanning" && <span className="flex items-center gap-2 text-xs font-bold text-primary">Reading… <span className="h-2 w-12 rounded-full skeleton-shimmer" /></span>}
+                      {d.status === "failed" && <AlertCircle className="size-5 text-danger" />}
                       {d.status === "done" && <CheckCircle2 className="size-5 text-success" />}
                     </button>
                   </li>
@@ -237,7 +238,7 @@ function ExtractionPanel({ doc }: { doc: MedicalDoc | null }) {
           </Field>
         )}
         {x.dates && (
-          <Field label="Dates">
+          <Field label={x.period ? `Dates · covers ${x.period.from ?? "?"} → ${x.period.to ?? "?"}` : "Dates"}>
             {x.dates.map((d) => <Chip key={d}>{d}</Chip>)}
           </Field>
         )}
@@ -245,12 +246,15 @@ function ExtractionPanel({ doc }: { doc: MedicalDoc | null }) {
           <Field label="Medicines" full>
             <table className="w-full text-sm">
               <tbody>
-                {x.medicines.map((m) => (
-                  <tr key={m.name} className="border-b last:border-0">
+                {x.medicines.map((m, i) => (
+                  <tr key={`${m.name}-${i}`} className="border-b last:border-0">
                     <td className="py-1.5 font-semibold">{m.name}</td>
                     <td className="py-1.5 text-muted-foreground">{m.dose}</td>
                     <td className="py-1.5 text-muted-foreground">{m.frequency}</td>
-                    <td className="py-1.5 text-right text-muted-foreground">{m.duration ?? ""}</td>
+                    <td className="py-1.5 text-right text-muted-foreground">
+                      {m.duration ?? ""}
+                      {(m.startDate || m.endDate) && <div className="text-xs">{m.startDate ?? "?"} → {m.endDate ?? "?"}</div>}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -265,23 +269,25 @@ function ExtractionPanel({ doc }: { doc: MedicalDoc | null }) {
         {x.labs && (
           <Field label="Lab values" full>
             <div className="space-y-1.5">
-              {x.labs.map((l) => {
+              {x.labs.map((l, i) => {
                 const abn = isAbnormal(l);
-                const pct = Math.min(100, Math.max(0, ((l.value - l.low) / (l.high - l.low || 1)) * 100));
+                const hasRange = l.low != null && l.high != null;
+                const pct = hasRange ? Math.min(100, Math.max(0, ((l.value - l.low!) / (l.high! - l.low! || 1)) * 100)) : 50;
+                const high = l.high != null && l.value > l.high;
                 return (
-                  <div key={l.test} className={cn("grid grid-cols-[1fr_auto] items-center gap-3 rounded-xl px-3 py-2", abn ? "bg-danger/10" : "bg-muted/60")}>
+                  <div key={`${l.test}-${i}`} className={cn("grid grid-cols-[1fr_auto] items-center gap-3 rounded-xl px-3 py-2", abn ? "bg-danger/10" : "bg-muted/60")}>
                     <div>
-                      <div className="flex items-center gap-2 text-sm font-semibold">
+                      <div className="flex flex-wrap items-center gap-2 text-sm font-semibold">
                         {abn && <AlertCircle className="size-4 text-danger" />} {l.test}
-                        <span className="text-xs font-normal text-muted-foreground">ref {l.low}–{l.high} {l.unit}</span>
+                        <span className="text-xs font-normal text-muted-foreground">ref {refRange(l)}{l.date ? ` · ${l.date}` : ""}</span>
                       </div>
                       <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-border">
-                        <div className={cn("h-full rounded-full", abn ? "bg-danger" : "bg-success")} style={{ width: `${pct}%` }} />
+                        <div className={cn("h-full rounded-full", abn ? "bg-danger" : hasRange ? "bg-success" : "bg-muted-foreground/40")} style={{ width: `${pct}%` }} />
                       </div>
                     </div>
                     <div className={cn("text-right font-display text-lg font-bold tabular-nums", abn ? "text-danger" : "text-foreground")}>
                       {l.value} <span className="text-xs font-normal">{l.unit}</span>
-                      {abn && <span className="ml-1 text-xs">{l.value > l.high ? "↑" : "↓"}</span>}
+                      {abn && <span className="ml-1 text-xs">{high ? "↑" : "↓"}</span>}
                     </div>
                   </div>
                 );
