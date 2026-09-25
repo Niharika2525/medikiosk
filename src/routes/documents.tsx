@@ -63,9 +63,9 @@ function DocumentsPage() {
     toast.info(`Sample record loaded (demo): ${d.title}`);
   };
 
-  const runOcr = async (blob: Blob, name: string) => {
-    if (blob.size > 10 * 1024 * 1024) return toast.error("File too large (max 10 MB).");
-    if (!["image/jpeg", "image/png", "image/webp", "application/pdf"].includes(blob.type)) return toast.error("Please use a JPG, PNG, WEBP photo or a PDF.");
+  const runOcr = async (blob: Blob, name: string): Promise<void> => {
+    if (blob.size > 10 * 1024 * 1024) { toast.error("File too large (max 10 MB)."); return; }
+    if (!["image/jpeg", "image/png", "image/webp", "application/pdf"].includes(blob.type)) { toast.error("Please use a JPG, PNG, WEBP photo or a PDF."); return; }
     const id = `u-${Date.now()}`;
     addDoc({ id, title: name.slice(0, 60), kind: "other", date: new Date().toISOString().slice(0, 10), status: "scanning", demo: false });
     try {
@@ -74,7 +74,8 @@ function DocumentsPage() {
       const x = r.result;
       if (!x.isMedicalDocument) {
         updateDoc(id, { status: "done", title: `${name.slice(0, 40)} (not a medical document)`, confidence: x.confidence, extracted: {} });
-        return toast.warning("That doesn't look like a medical document.");
+        toast.warning("That doesn't look like a medical document.");
+        return;
       }
       const dates = [...new Set([x.documentDate, x.periodFrom, x.periodTo, ...x.labs.map((l) => l.date)].filter((v): v is string => !!v))].sort();
       updateDoc(id, {
@@ -84,14 +85,14 @@ function DocumentsPage() {
         date: x.documentDate ?? x.periodFrom ?? new Date().toISOString().slice(0, 10),
         confidence: Math.max(0, Math.min(1, x.confidence)),
         extracted: {
-          facility: x.facility ?? undefined,
-          doctor: x.doctor ?? undefined,
-          diagnoses: x.diagnoses.length ? x.diagnoses : undefined,
-          investigations: x.investigations.length ? x.investigations : undefined,
-          medicines: x.medicines.length ? x.medicines : undefined,
-          labs: x.labs.length ? x.labs : undefined,
-          dates: dates.length ? dates : undefined,
-          period: x.periodFrom || x.periodTo ? { from: x.periodFrom, to: x.periodTo } : undefined,
+          ...(x.facility ? { facility: x.facility } : {}),
+          ...(x.doctor ? { doctor: x.doctor } : {}),
+          ...(x.diagnoses.length ? { diagnoses: x.diagnoses } : {}),
+          ...(x.investigations.length ? { investigations: x.investigations } : {}),
+          ...(x.medicines.length ? { medicines: x.medicines } : {}),
+          ...(x.labs.length ? { labs: x.labs } : {}),
+          ...(dates.length ? { dates } : {}),
+          ...(x.periodFrom || x.periodTo ? { period: { from: x.periodFrom, to: x.periodTo } } : {}),
         },
       });
       setOpenId(id);
