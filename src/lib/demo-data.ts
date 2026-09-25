@@ -43,7 +43,7 @@ export type MedicalDoc = {
   title: string;
   kind: DocKind;
   date: string; // ISO
-  status: "pending" | "scanning" | "done";
+  status: "pending" | "scanning" | "done" | "failed";
   confidence?: number;
   extracted?: ExtractedData;
   demo: boolean;

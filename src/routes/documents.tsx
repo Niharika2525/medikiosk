@@ -97,7 +97,7 @@ function DocumentsPage() {
       setOpenId(id);
       toast.success(`Read: ${x.title}`);
     } catch (e) {
-      updateDoc(id, { status: "failed" as MedicalDoc["status"], title: `${name.slice(0, 40)} — couldn't read` });
+      updateDoc(id, { status: "failed", title: `${name.slice(0, 40)} — couldn't read` });
       toast.error(e instanceof Error ? e.message : "Couldn't read that document.");
     }
   };
