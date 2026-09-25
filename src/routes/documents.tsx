@@ -225,11 +225,11 @@ function ExtractionPanel({ doc }: { doc: MedicalDoc | null }) {
     <div className="animate-fade-up rounded-3xl border bg-card p-5 shadow-card sm:p-6">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
         <div>
-          <div className="text-xs font-bold uppercase tracking-widest text-primary">OCR extraction</div>
+          <div className="text-xs font-bold uppercase tracking-widest text-primary">AI document reading</div>
           <h3 className="text-xl font-bold">{doc.title}</h3>
           <p className="text-sm text-muted-foreground">{x.facility}{x.doctor ? ` · ${x.doctor}` : ""}</p>
         </div>
-        <span className="rounded-full bg-success/15 px-3 py-1 text-xs font-bold text-success">Confidence {(100 * (doc.confidence ?? 0.9)).toFixed(0)}%</span>
+        <span className="rounded-full bg-success/15 px-3 py-1 text-xs font-bold text-success">{doc.demo ? "Sample · " : ""}Confidence {(100 * (doc.confidence ?? 0.9)).toFixed(0)}%</span>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
