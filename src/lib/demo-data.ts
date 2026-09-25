@@ -20,16 +20,18 @@ export type LabValue = {
   test: string;
   value: number;
   unit: string;
-  low: number;
-  high: number;
+  low?: number | null;
+  high?: number | null;
+  date?: string | null;
 };
 
 export type ExtractedData = {
-  medicines?: { name: string; dose: string; frequency: string; duration?: string }[];
+  medicines?: { name: string; dose: string; frequency: string; duration?: string | null; startDate?: string | null; endDate?: string | null }[];
   diagnoses?: string[];
   investigations?: string[];
   labs?: LabValue[];
   dates?: string[];
+  period?: { from: string | null; to: string | null };
   doctor?: string;
   facility?: string;
 };
@@ -41,7 +43,7 @@ export type MedicalDoc = {
   title: string;
   kind: DocKind;
   date: string; // ISO
-  status: "pending" | "scanning" | "done";
+  status: "pending" | "scanning" | "done" | "failed";
   confidence?: number;
   extracted?: ExtractedData;
   demo: boolean;
